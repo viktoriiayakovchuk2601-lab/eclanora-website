@@ -3,7 +3,7 @@
   --ivory: #f7f5f0;
   --green: #173b35;
   --gold: #c7ae83;
-  --muted: #686e65;
+  --muted: #505a50;
   --line: #deded4;
   --ink: #242424;
 }
@@ -250,7 +250,7 @@ p {
   align-items: center;
   gap: 7px;
   font-size: 9px;
-  color: #71766a;
+  color: var(--muted);
   margin-top: 30px;
 }
 .hero-image {
@@ -367,12 +367,14 @@ p {
   transform: translateY(-5px);
 }
 .card-photo {
+  position: relative;
   height: 255px;
-  background-size: cover;
-  background-position: center;
 }
-.service-card:nth-child(2) .card-photo {
-  background-position: 45% center;
+.card-photo img {
+  object-fit: cover;
+}
+.service-card:nth-child(2) .card-photo img {
+  object-position: 45% center;
 }
 .service-card-content {
   position: relative;
@@ -381,7 +383,7 @@ p {
 .service-card-content .eyebrow {
   font-size: 7px;
   letter-spacing: 1.3px;
-  color: #7b805f;
+  color: var(--muted);
 }
 .service-card h3 {
   font-size: 23px;
@@ -487,7 +489,7 @@ p {
 }
 .step-number {
   display: block;
-  color: #a48e65;
+  color: #806a43;
   font: italic 38px Georgia;
   border-bottom: 1px solid #d7d8cd;
   padding-bottom: 22px;
@@ -565,14 +567,14 @@ p {
   font-size: 8px;
   letter-spacing: 2px;
   margin-top: 9px;
-  color: #77806b;
+  color: var(--muted);
 }
 .zone-caption {
   position: absolute;
   bottom: 20px;
   font-size: 7px;
   letter-spacing: 2px;
-  color: #67725a;
+  color: var(--muted);
 }
 .faq-section {
   display: grid;
@@ -708,7 +710,7 @@ footer {
   display: flex;
   gap: 8px;
   font-size: 9px;
-  color: #6f785f;
+  color: var(--muted);
 }
 .footer-invite .text-link {
   font-size: 10px;
@@ -721,7 +723,7 @@ footer {
   justify-content: space-between;
   gap: 20px;
   font-size: 8px;
-  color: #68725f;
+  color: var(--muted);
 }
 .footer-bottom > div {
   display: flex;

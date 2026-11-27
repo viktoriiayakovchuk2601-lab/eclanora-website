@@ -1,17 +1,14 @@
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  Sparkles,
-  MapPin,
-  Check,
-  ArrowRight,
-} from "lucide-react";
-import { company, published } from "@/lib/company";
-import { services, generalFaq } from "@/lib/content";
+import Image from "next/image";
+import { ArrowUpRight, Sparkles, MapPin, Check } from "lucide-react";
+import { company, published, showProfessionalServices } from "@/lib/company";
+import { services, generalFaq, isProfessionalService } from "@/lib/content";
 export function Brand() {
   return (
-    <Link href="/" className="brand" aria-label="Éclanora, accueil">
-      <span className="brand-symbol">✧</span>
+    <Link href="/" className="brand">
+      <span className="brand-symbol" aria-hidden="true">
+        ✧
+      </span>
       <span>
         ÉCLANORA<small>L’ART DU PROPRE</small>
       </span>
@@ -23,23 +20,27 @@ export function Header() {
     <>
       <div className="topline">
         <span>SAINT-GERMAIN-EN-LAYE & ENVIRONS</span>
-        <span>Particuliers · Professionnels · Copropriétés</span>
+        <span>
+          {showProfessionalServices
+            ? "Particuliers · Professionnels · Copropriétés"
+            : "Ménage à domicile"}
+        </span>
       </div>
       <header className="header">
         <Brand />
         <nav className="desktop-nav" aria-label="Navigation principale">
-          <Link href="/#prestations">Nos prestations</Link>
+          <Link href="/services/">Nos prestations</Link>
           <Link href="/a-propos/">L’esprit Éclanora</Link>
           <Link href="/zones-intervention/">Nos secteurs</Link>
           <Link href="/conseils/">Le journal</Link>
         </nav>
         <Link className="button header-cta" href="/devis/">
-          Parlons de votre projet <ArrowUpRight size={16} />
+          Demander un devis <ArrowUpRight size={16} />
         </Link>
         <details className="mobile-nav">
           <summary>Menu</summary>
           <nav aria-label="Navigation mobile">
-            <Link href="/#prestations">Nos prestations</Link>
+            <Link href="/services/">Nos prestations</Link>
             <Link href="/a-propos/">L’esprit Éclanora</Link>
             <Link href="/zones-intervention/">Nos secteurs</Link>
             <Link href="/conseils/">Le journal</Link>
@@ -74,11 +75,16 @@ export function Footer() {
         </div>
         <div>
           <h3>Nos prestations</h3>
-          {services.map((s) => (
-            <Link key={s.slug} href={`/${s.slug}/`}>
-              {s.title}
-            </Link>
-          ))}
+          {services
+            .filter(
+              ({ slug }) =>
+                showProfessionalServices || !isProfessionalService(slug),
+            )
+            .map((s) => (
+              <Link key={s.slug} href={`/${s.slug}/`}>
+                {s.title}
+              </Link>
+            ))}
         </div>
         <div>
           <h3>La maison Éclanora</h3>
@@ -182,30 +188,36 @@ export function ServiceCards() {
           image: "/images/staircase.webp",
           label: "03 / POUR VOTRE IMMEUBLE",
         },
-      ].map(({ i, image, label }) => (
-        <Link href={`/${services[i].slug}/`} className="service-card" key={i}>
-          <div
-            className="card-photo"
-            style={{ backgroundImage: `url(${image})` }}
-          />
-          <div className="service-card-content">
-            <span className="eyebrow">{label}</span>
-            <h3>
-              {
-                [
-                  "Maisons & appartements",
-                  "Bureaux & entreprises",
-                  "Copropriétés & syndics",
-                ][i === 0 ? 0 : i === 3 ? 1 : 2]
-              }
-            </h3>
-            <p>{services[i].short}</p>
-            <span className="card-arrow">
-              <ArrowUpRight size={20} />
-            </span>
-          </div>
-        </Link>
-      ))}
+      ]
+        .filter(({ i }) => showProfessionalServices || i === 0)
+        .map(({ i, image, label }) => (
+          <Link href={`/${services[i].slug}/`} className="service-card" key={i}>
+            <div className="card-photo">
+              <Image
+                src={image}
+                alt=""
+                fill
+                sizes="(max-width: 760px) 86vw, 29vw"
+              />
+            </div>
+            <div className="service-card-content">
+              <span className="eyebrow">{label}</span>
+              <h3>
+                {
+                  [
+                    "Maisons & appartements",
+                    "Bureaux & entreprises",
+                    "Copropriétés & syndics",
+                  ][i === 0 ? 0 : i === 3 ? 1 : 2]
+                }
+              </h3>
+              <p>{services[i].short}</p>
+              <span className="card-arrow">
+                <ArrowUpRight size={20} />
+              </span>
+            </div>
+          </Link>
+        ))}
     </div>
   );
 }

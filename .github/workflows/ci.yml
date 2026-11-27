@@ -1,0 +1,32 @@
+name: Qualité
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: http://127.0.0.1:3100
+      QUOTE_MODE: test
+      PUBLICATION_APPROVED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm audit --audit-level=moderate
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e
+      - run: |
+          npm run start -- --port 3100 &
+          for i in {1..30}; do
+            if curl -fsS -o /dev/null http://127.0.0.1:3100/; then break; fi
+            sleep 1
+          done
+          TEST_URL=http://127.0.0.1:3100 EXPECT_PRODUCTION=true npm run test:smoke

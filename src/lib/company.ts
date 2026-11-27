@@ -20,7 +20,8 @@ export const company = {
   processors: [] as string[],
   hourlyRate: 30,
   rateConfirmed: false,
-  SAP_STATUS: "pending" as "pending" | "registered",
+  professionalServicesApproved: false,
+  SAP_STATUS: "pending" as "undeclared" | "pending" | "registered",
   SAP_DECLARATION_NUMBER: null as string | null,
   SAP_LEGAL_APPROVED: false,
   URSSAF_ADVANCE_IMMEDIATE_ENABLED: false,
@@ -42,3 +43,5 @@ export const sapAvailable =
   company.SAP_LEGAL_APPROVED;
 export const siteUrl = process.env.SITE_URL || "http://localhost:3000";
 export const published = process.env.PUBLICATION_APPROVED === "true";
+export const showProfessionalServices =
+  !published || company.professionalServicesApproved;

@@ -11,10 +11,42 @@ import {
   Steps,
 } from "@/components/site";
 import { QuoteForm } from "@/components/quote-form";
-import { services, articles, generalFaq } from "@/lib/content";
+import { PriceEstimator } from "@/components/price-estimator";
+import {
+  services as serviceCatalog,
+  articles,
+  generalFaq,
+  isProfessionalService,
+  localPages,
+} from "@/lib/content";
 import { legalPages } from "@/lib/legal";
-import { company, sapAvailable, siteUrl } from "@/lib/company";
+import {
+  company,
+  published,
+  sapAvailable,
+  showProfessionalServices,
+  siteUrl,
+} from "@/lib/company";
+const services = serviceCatalog.filter(
+  ({ slug }) => showProfessionalServices || !isProfessionalService(slug),
+);
+const places = localPages.filter(({ city }) =>
+  company.confirmedZones.includes(city),
+);
 const pages: Record<string, { title: string; lead: string }> = {
+  ...Object.fromEntries(
+    places.map(({ slug, city, postalCode }) => [
+      slug,
+      {
+        title: `Ménage à domicile à ${city}`,
+        lead: `Nettoyage ponctuel ou régulier de maisons et d’appartements à ${city} (${postalCode}), sur devis.`,
+      },
+    ]),
+  ),
+  services: {
+    title: "Nos services de nettoyage",
+    lead: "Découvrez les prestations et leur périmètre avant de demander un devis personnalisé.",
+  },
   "a-propos": {
     title: "Le soin des lieux. Le sens du détail.",
     lead: "Éclanora, une approche attentive du nettoyage à Saint-Germain-en-Laye.",
@@ -206,6 +238,19 @@ export default async function Page({
               title={p.title}
               lead={p.lead}
             />
+            {slug === "services" && (
+              <div className="prose">
+                <h2>Choisir une prestation</h2>
+                <ul>
+                  {services.map((service) => (
+                    <li key={service.slug}>
+                      <Link href={`/${service.slug}/`}>{service.title}</Link>
+                      <p>{service.short}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {slug === "devis" && (
               <div className="quote-layout">
                 <aside>
@@ -238,7 +283,7 @@ export default async function Page({
                     Votre téléphone est facultatif.
                   </p>
                 </aside>
-                <QuoteForm />
+                <QuoteForm professional={showProfessionalServices} />
               </div>
             )}
             {slug === "a-propos" && (
@@ -288,16 +333,26 @@ export default async function Page({
                   </p>
                 ) : (
                   <p>
-                    Le tarif horaire de référence n’est pas encore confirmé.
-                    Aucun prix indicatif ni simulation chiffrée n’est publié à
-                    ce stade.
+                    Le tarif horaire de référence n’est pas encore confirmé. Le
+                    prix sera précisé dans le devis.
                   </p>
                 )}
-                <h2>Particuliers et professionnels</h2>
+                {(company.rateConfirmed || !published) && (
+                  <PriceEstimator
+                    rate={company.hourlyRate}
+                    sap={company.rateConfirmed && sapAvailable}
+                    preview={!company.rateConfirmed}
+                  />
+                )}
+                <h2>
+                  {showProfessionalServices
+                    ? "Particuliers et professionnels"
+                    : "Votre devis à domicile"}
+                </h2>
                 <p>
                   Pour un logement, le devis décrit les pièces et les priorités.
-                  Pour des bureaux ou une copropriété, il s’appuie sur un cahier
-                  des tâches, les accès et la fréquence souhaitée.
+                  {showProfessionalServices &&
+                    " Pour des bureaux ou une copropriété, il précise aussi le cahier des tâches, les accès et la fréquence souhaitée."}
                 </p>
                 <p>
                   Un devis personnalisé est proposé gratuitement. La demande ne
@@ -308,8 +363,9 @@ export default async function Page({
                 </Link>
                 <h2>À propos des avantages fiscaux</h2>
                 <p>
-                  Aucun coût après crédit d’impôt n’est annoncé tant que la
-                  déclaration SAP et les autres conditions ne sont pas validées.
+                  {sapAvailable
+                    ? "Le crédit d’impôt concerne les prestations éligibles au domicile des particuliers, sous réserve des conditions et plafonds applicables."
+                    : "L’estimation après crédit d’impôt sera disponible après validation de la déclaration SAP et du tarif."}
                 </p>
                 <Link href="/services-a-la-personne/">
                   Lire les informations SAP
@@ -321,6 +377,13 @@ export default async function Page({
                 <h2>
                   <MapPin size={24} /> Saint-Germain-en-Laye — 78100
                 </h2>
+                {places.map((place) => (
+                  <p key={place.slug}>
+                    <Link href={`/${place.slug}/`}>
+                      Préparer une intervention à {place.city}
+                    </Link>
+                  </p>
+                ))}
                 <p>
                   La commune constitue la zone d’intervention renseignée pour le
                   lancement. Les disponibilités et les modalités d’accès sont
@@ -339,13 +402,35 @@ export default async function Page({
                 </Link>
               </div>
             )}
+            {places
+              .filter((place) => place.slug === slug)
+              .map((place) => (
+                <div className="prose" key={place.slug}>
+                  {place.sections.map(([title, body]) => (
+                    <section key={title}>
+                      <h2>{title}</h2>
+                      <p>{body}</p>
+                    </section>
+                  ))}
+                  <Link href="/menage-regulier/">
+                    Découvrir l’entretien régulier
+                  </Link>
+                  <p>
+                    <Link href="/devis/" className="button">
+                      Demander un devis à {place.city}
+                    </Link>
+                  </p>
+                </div>
+              ))}
             {slug === "services-a-la-personne" && (
               <div className="prose">
                 <div className="notice">
                   <strong>
                     {sapAvailable
                       ? `Déclaration SAP : ${company.SAP_DECLARATION_NUMBER}`
-                      : "Déclaration SAP non confirmée"}
+                      : company.SAP_STATUS === "undeclared"
+                        ? "Activité non déclarée au titre des SAP"
+                        : "Déclaration SAP à confirmer"}
                   </strong>
                   <p>
                     {sapAvailable
@@ -393,7 +478,7 @@ export default async function Page({
                   </a>
                 </p>
                 <p className="small">
-                  Informations vérifiées le 2 novembre 2026. Les conditions
+                  Informations vérifiées le 27 novembre 2026. Les conditions
                   doivent être revérifiées avant activation de l’offre et
                   adaptées à votre situation.
                 </p>
@@ -429,13 +514,10 @@ export default async function Page({
                   <span className="eyebrow">VOTRE PROJET</span>
                   <h2>Décrivez votre besoin.</h2>
                   <p>
-                    Un entretien récurrent, un nettoyage ponctuel ou des espaces
-                    professionnels : le formulaire nous permet de préparer un
-                    échange utile.
+                    Posez une question sur nos prestations ou laissez votre
+                    numéro pour être rappelé.
                   </p>
-                  <Link href="/devis/" className="button">
-                    Accéder au formulaire <ArrowUpRight size={16} />
-                  </Link>
+                  <QuoteForm contact />
                 </div>
               </div>
             )}

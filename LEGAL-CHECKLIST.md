@@ -41,3 +41,11 @@ Obtenir la preuve de déclaration enregistrée et le numéro exact. Vérifier l�
 ## Hors validation automatique
 
 L’immatriculation réelle, la validation INPI, le statut fiscal, les assurances, le médiateur et les droits d’utilisation du nom n’ont pas été vérifiés individuellement. Faire valider ces éléments et les textes avant ouverture.
+
+## Références officielles vérifiées le 27 novembre 2026
+
+- Pour l’EI, valider l’identité, l’immatriculation, la domiciliation, les coordonnées et l’hébergeur. La référence interne d’une formalité n’est pas nécessaire dans les mentions affichées. [Entreprendre Service Public](https://entreprendre.service-public.gouv.fr/vosdroits/F37351)
+- Vérifier les conditions de conclusion et de résiliation des contrats, y compris lorsque le devis est accepté à distance, puis joindre le formulaire type lorsque requis. Depuis le 19 juin 2026, une fonctionnalité de rétractation en ligne est requise pour les contrats conclus à distance au moyen d’une interface en ligne lorsque le droit s’applique. Renseigner le médiateur conventionné dans les mentions et les CGV. [CGV et rétractation](https://entreprendre.service-public.gouv.fr/vosdroits/F33527) · [Médiation](https://entreprendre.service-public.gouv.fr/vosdroits/F33338)
+- Vérifier au regard du modèle de contractualisation et de la taille de l’entreprise si les obligations d’accessibilité du commerce électronique s’appliquent. [Entreprendre Service Public](https://entreprendre.service-public.gouv.fr/actualites/A18669)
+- En cas d’offre SAP mixte, faire valider la condition d’activité exclusive ou sa dispense et organiser la séparation des activités. [Portail Services à la personne](https://www.servicesalapersonne.gouv.fr/files/sap/files/documents/2025/faq-osp-amenagement-dispense-cae.pdf)
+- Conserver la configuration sans traceurs facultatifs. Si un outil requérant le consentement est activé, vérifier l’équivalence du refus et de l’acceptation, le blocage préalable et le retrait. [CNIL](https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/FAQ)

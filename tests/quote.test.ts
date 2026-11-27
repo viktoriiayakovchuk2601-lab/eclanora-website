@@ -1,6 +1,6 @@
-import test from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
-import { quoteSchema } from "../src/lib/quote.ts";
+import { contactSchema, quoteSchema } from "../src/lib/quote.ts";
 import { productionIssues } from "../src/lib/readiness.ts";
 const valid = {
   firstName: "Jeanne",
@@ -24,12 +24,31 @@ test("refuse les données malformées et les messages trop longs", () => {
   for (const patch of [
     { email: "bad" },
     { postalCode: "7810" },
+    { phone: ".........." },
     { surface: "-1" },
     { date: "2020-01-01" },
+    { date: "2099-02-31" },
     { message: "x".repeat(4001) },
     { clientType: "autre" },
   ])
     assert.equal(quoteSchema.safeParse({ ...valid, ...patch }).success, false);
+});
+test("contact sans données de devis et rappel avec téléphone", () => {
+  const payload = { ...valid, intent: "contact" };
+  const parsed = contactSchema.parse(payload);
+  assert.equal("postalCode" in parsed, false);
+  assert.equal(
+    contactSchema.safeParse({ ...payload, intent: "rappel" }).success,
+    false,
+  );
+  assert.equal(
+    contactSchema.safeParse({
+      ...payload,
+      intent: "rappel",
+      phone: "0600000000",
+    }).success,
+    true,
+  );
 });
 test("exige une organisation pour un professionnel", () => {
   assert.equal(

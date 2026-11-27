@@ -1,24 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { randomUUID } from "node:crypto";
-import { quoteSchema } from "@/lib/quote";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { contactSchema, quoteSchema } from "@/lib/quote";
+import { showProfessionalServices } from "@/lib/company";
 export const runtime = "nodejs";
 // Single-instance defence only; enforce a shared edge rate limit before multi-instance production.
 const limits = new Map<string, { count: number; until: number }>();
-function reply(body: object, status = 200) {
+const limiterSecret = randomBytes(32);
+const windowMs = 600_000;
+function reply(body: object, status = 200, retryAfter?: number) {
   return NextResponse.json(body, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+      ...(retryAfter === undefined
+        ? {}
+        : { "Retry-After": String(retryAfter) }),
+    },
   });
 }
 export async function POST(req: NextRequest) {
   const allowedOrigin =
     process.env.NODE_ENV === "production"
-      ? process.env.SITE_URL || new URL(req.url).origin
+      ? new URL(process.env.SITE_URL || req.url).origin
       : `http://${req.headers.get("host")}`;
   if (req.headers.get("origin") !== allowedOrigin)
     return reply({ message: "Origine de la demande non autorisée." }, 403);
-  if (!req.headers.get("content-type")?.startsWith("application/json"))
+  if (
+    req.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
+    "application/json"
+  )
     return reply({ message: "Format de demande non accepté." }, 415);
   const max = 16_000;
   if (Number(req.headers.get("content-length") || 0) > max)
@@ -43,17 +54,30 @@ export async function POST(req: NextRequest) {
   } catch {
     return reply({ message: "Demande illisible." }, 400);
   }
-  const result = quoteSchema.safeParse(input);
+  const schema =
+    input?.intent === "contact" || input?.intent === "rappel"
+      ? contactSchema
+      : quoteSchema;
+  const result = schema.safeParse(input);
   if (!result.success) {
-    const errors: Record<string, string> = {};
-    for (const issue of result.error.issues)
-      errors[String(issue.path[0])] = "Vérifiez ce champ et son format.";
+    const errors = Object.fromEntries(
+      result.error.issues.map(({ path }) => [
+        String(path[0]),
+        "Vérifiez ce champ et son format.",
+      ]),
+    );
     return reply(
       { message: "Certains champs doivent être corrigés.", errors },
       400,
     );
   }
   const v = result.data;
+  if (
+    !showProfessionalServices &&
+    "clientType" in v &&
+    v.clientType !== "particulier"
+  )
+    return reply({ message: "Cette prestation n’est pas disponible." }, 400);
   if (
     v.website ||
     Date.now() - v.startedAt < 2000 ||
@@ -67,23 +91,29 @@ export async function POST(req: NextRequest) {
       400,
     );
   const now = Date.now();
-  for (const [k, b] of limits) if (b.until < now) limits.delete(k);
+  for (const [k, b] of limits) if (b.until <= now) limits.delete(k);
   const ip =
     process.env.TRUST_PROXY === "true"
-      ? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
-      : "local";
-  const key = `${ip}:${v.email.toLowerCase()}`;
-  const bucket = limits.get(key) || { count: 0, until: now + 600000 };
-  bucket.count++;
-  limits.set(key, bucket);
-  if (bucket.count > 5)
-    return reply(
-      {
-        message:
-          "Trop de demandes. Merci de patienter dix minutes avant de réessayer.",
-      },
-      429,
-    );
+      ? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      : undefined;
+  if (ip || process.env.EDGE_RATE_LIMIT_CONFIGURED !== "true") {
+    const key = createHmac("sha256", limiterSecret)
+      .update(ip || "local")
+      .digest("hex");
+    const bucket = limits.get(key);
+    if ((bucket && bucket.count >= 5) || (!bucket && limits.size >= 10_000))
+      return reply(
+        {
+          message: "Trop de demandes. Merci de patienter avant de réessayer.",
+        },
+        429,
+        Math.ceil(((bucket?.until ?? now + windowMs) - now) / 1000),
+      );
+    limits.set(key, {
+      count: (bucket?.count ?? 0) + 1,
+      until: bucket?.until ?? now + windowMs,
+    });
+  }
   if (process.env.QUOTE_MODE !== "smtp") {
     if (process.env.NODE_ENV === "production")
       return reply(
@@ -102,9 +132,13 @@ export async function POST(req: NextRequest) {
   }
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, QUOTE_FROM, QUOTE_TO } =
     process.env;
+  const port = Number(SMTP_PORT);
   if (
     !SMTP_HOST ||
     !SMTP_PORT ||
+    !/^\d+$/.test(SMTP_PORT) ||
+    port < 1 ||
+    port > 65535 ||
     !SMTP_USER ||
     !SMTP_PASS ||
     !QUOTE_FROM ||
@@ -119,24 +153,24 @@ export async function POST(req: NextRequest) {
     );
   const transporter = nodemailer.createTransport({
     host: SMTP_HOST,
-    port: Number(SMTP_PORT),
-    secure: Number(SMTP_PORT) === 465,
-    requireTLS: Number(SMTP_PORT) !== 465,
+    port,
+    secure: port === 465,
+    requireTLS: port !== 465,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
     connectionTimeout: 10000,
     socketTimeout: 15000,
     tls: { rejectUnauthorized: true },
   });
+  const reference = randomUUID();
   try {
-    const reference = randomUUID();
-    const { website, startedAt, ...fields } = v;
+    const { website, startedAt, intent = "devis", ...fields } = v;
     void website;
     void startedAt;
     const info = await transporter.sendMail({
       from: QUOTE_FROM,
       to: QUOTE_TO,
       replyTo: v.email,
-      subject: `ÉCLANORA — Demande de devis ${reference}`,
+      subject: `ÉCLANORA — Demande de ${intent} ${reference}`,
       text:
         `Référence : ${reference}\n\n` +
         Object.entries(fields)
@@ -145,10 +179,9 @@ export async function POST(req: NextRequest) {
     });
     if (!info.accepted?.length || info.rejected?.length)
       throw new Error("Delivery rejected");
-    return reply({
-      message: `Votre demande a été transmise au service de messagerie. Référence : ${reference}.`,
-    });
   } catch {
+    console.error("quote_delivery_failed", { reference });
+    transporter.close();
     return reply(
       {
         message:
@@ -156,6 +189,24 @@ export async function POST(req: NextRequest) {
       },
       502,
     );
+  }
+  try {
+    const confirmation = await transporter.sendMail({
+      from: QUOTE_FROM,
+      to: v.email,
+      subject: `ÉCLANORA — Confirmation de demande ${reference}`,
+      text: `Nous avons reçu votre demande. Référence : ${reference}. Cette confirmation ne constitue ni un devis ni une réservation.`,
+    });
+    if (!confirmation.accepted?.length || confirmation.rejected?.length)
+      throw new Error("Confirmation rejected");
+    return reply({
+      message: `Votre demande a été transmise. Un e-mail de confirmation a été envoyé. Référence : ${reference}.`,
+    });
+  } catch {
+    console.error("quote_confirmation_failed", { reference });
+    return reply({
+      message: `Votre demande a été transmise. L’e-mail de confirmation n’a pas pu être envoyé. Référence : ${reference}.`,
+    });
   } finally {
     transporter.close();
   }

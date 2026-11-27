@@ -2,30 +2,43 @@
   "name": "eclanora",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build",
+    "dev": "next dev --webpack --hostname 127.0.0.1",
+    "build": "next build --webpack",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:smoke": "node scripts/smoke-test.mjs",
     "check:production": "node scripts/check-production.mjs"
   },
   "dependencies": {
     "lucide-react": "latest",
-    "next": "latest",
+    "next": "16.4.6",
     "nodemailer": "latest",
     "react": "latest",
     "react-dom": "latest",
     "zod": "latest"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.1",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
     "@types/nodemailer": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "eslint": "10.15.0",
+    "eslint-config-next": "16.4.6",
+    "lighthouse": "13.6.0",
     "prettier": "^3.9.10",
     "tailwindcss": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "5.1.2"
   }
 }

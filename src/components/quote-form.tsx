@@ -1,49 +1,76 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { services } from "@/lib/content";
-export function QuoteForm() {
+export function QuoteForm({
+  contact = false,
+  professional = false,
+}: {
+  contact?: boolean;
+  professional?: boolean;
+}) {
+  const [intent, setIntent] = useState<"contact" | "rappel">("contact");
   const [client, setClient] = useState("particulier");
   const [state, setState] = useState<
     "idle" | "loading" | "success" | "error" | "test"
   >("idle");
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const started = useRef(Date.now());
+  const [startedAt, setStartedAt] = useState(() => Date.now());
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const data = Object.fromEntries(new FormData(form));
+    const data = {
+      ...Object.fromEntries(new FormData(form)),
+      intent: contact ? intent : "devis",
+      startedAt,
+    };
     setState("loading");
     setErrors({});
     try {
-      const response = await fetch("/api/devis", {
+      const { contactSchema, quoteSchema } = await import("@/lib/quote");
+      const validated = (contact ? contactSchema : quoteSchema).safeParse(data);
+      if (!validated.success) {
+        setErrors(
+          Object.fromEntries(
+            validated.error.issues.map(({ path }) => [
+              String(path[0]),
+              "Vérifiez ce champ et son format.",
+            ]),
+          ),
+        );
+        setState("error");
+        setMessage("Certains champs doivent être corrigés.");
+        return;
+      }
+      const response = await fetch("/api/devis/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, startedAt: started.current }),
+        body: JSON.stringify(validated.data),
       });
       const result = await response.json();
       if (!response.ok) {
         setErrors(result.errors || {});
-        throw new Error(
+        setState("error");
+        setMessage(
           result.message ||
             "La demande n’a pas pu être transmise. Réessayez plus tard.",
         );
+        return;
       }
       setState(result.test ? "test" : "success");
       setMessage(result.message);
       if (!result.test) {
         form.reset();
         setClient("particulier");
-        started.current = Date.now();
+        setIntent("contact");
+        setStartedAt(Date.now());
       }
-    } catch (err) {
+    } catch {
       setState("error");
       setMessage(
-        err instanceof Error
-          ? err.message
-          : "Erreur réseau. Vérifiez votre connexion et réessayez.",
+        "La demande n’a pas pu être transmise. Vérifiez votre connexion et réessayez.",
       );
     }
   }
@@ -53,133 +80,179 @@ export function QuoteForm() {
         {errors[name]}
       </span>
     ) : null;
+  const fieldState = (name: string) => ({
+    "aria-invalid": errors[name] ? true : undefined,
+    "aria-describedby": errors[name] ? `${name}-error` : undefined,
+  });
   return (
     <form
       className="quote-form"
       onSubmit={submit}
       aria-busy={state === "loading"}
     >
-      <div className="form-section-label">01 / VOTRE PROJET</div>
-      <fieldset>
-        <legend>Vous êtes</legend>
-        <div className="client-choices">
-          {[
-            ["particulier", "Un particulier"],
-            ["professionnel", "Un professionnel"],
-            ["syndic", "Un syndic"],
-          ].map(([v, l]) => (
-            <label key={v}>
+      {contact ? (
+        <label>
+          Motif du contact
+          <select
+            value={intent}
+            onChange={(event) =>
+              setIntent(event.target.value === "rappel" ? "rappel" : "contact")
+            }
+          >
+            <option value="contact">Envoyer un message</option>
+            <option value="rappel">Être rappelé</option>
+          </select>
+        </label>
+      ) : (
+        <>
+          <div className="form-section-label">Votre projet</div>
+          <fieldset>
+            <legend>Vous êtes</legend>
+            <div className="client-choices">
+              {[
+                ["particulier", "Un particulier"],
+                ["professionnel", "Un professionnel"],
+                ["syndic", "Un syndic"],
+              ]
+                .filter(([value]) => professional || value === "particulier")
+                .map(([v, l]) => (
+                  <label key={v}>
+                    <input
+                      type="radio"
+                      name="clientType"
+                      value={v}
+                      checked={client === v}
+                      onChange={() => setClient(v)}
+                    />
+                    <span>{l}</span>
+                  </label>
+                ))}
+            </div>
+          </fieldset>
+          {client !== "particulier" && (
+            <label>
+              Entreprise ou copropriété *
               <input
-                type="radio"
-                name="clientType"
-                value={v}
-                checked={client === v}
-                onChange={() => setClient(v)}
+                name="organization"
+                required
+                maxLength={160}
+                {...fieldState("organization")}
               />
-              <span>{l}</span>
+              {error("organization")}
             </label>
-          ))}
-        </div>
-      </fieldset>
-      {client !== "particulier" && (
-        <label>
-          Entreprise ou copropriété *
-          <input name="organization" required maxLength={160} />
-          {error("organization")}
-        </label>
+          )}
+          <div className="form-grid">
+            <label>
+              Prestation souhaitée *
+              <select
+                name="service"
+                key={client}
+                required
+                {...fieldState("service")}
+              >
+                {services
+                  .filter(
+                    (s) =>
+                      client !== "particulier" ||
+                      !["nettoyage-bureaux", "nettoyage-coproprietes"].includes(
+                        s.slug,
+                      ),
+                  )
+                  .map((s) => (
+                    <option value={s.slug} key={s.slug}>
+                      {s.title}
+                    </option>
+                  ))}
+              </select>
+              {error("service")}
+            </label>
+            <label>
+              Fréquence *
+              <select name="frequency" required {...fieldState("frequency")}>
+                <option value="a-definir">À définir ensemble</option>
+                <option value="ponctuelle">Une intervention ponctuelle</option>
+                <option value="hebdomadaire">Chaque semaine</option>
+                <option value="bimensuelle">Tous les quinze jours</option>
+              </select>
+              {error("frequency")}
+            </label>
+            <label>
+              Surface approximative (m²)
+              <input
+                name="surface"
+                {...fieldState("surface")}
+                type="number"
+                min="1"
+                max="999999"
+                placeholder="Ex. 80"
+              />
+              {error("surface")}
+            </label>
+            <label>
+              Date souhaitée
+              <input
+                name="date"
+                {...fieldState("date")}
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+              />
+              {error("date")}
+            </label>
+            <label>
+              Ville d’intervention *
+              <input
+                name="city"
+                {...fieldState("city")}
+                required
+                maxLength={100}
+                autoComplete="address-level2"
+                placeholder="Saint-Germain-en-Laye"
+              />
+              {error("city")}
+            </label>
+            <label>
+              Code postal *
+              <input
+                name="postalCode"
+                {...fieldState("postalCode")}
+                required
+                pattern="[0-9]{5}"
+                maxLength={5}
+                inputMode="numeric"
+                autoComplete="postal-code"
+                placeholder="78100"
+              />
+              {error("postalCode")}
+            </label>
+          </div>
+        </>
       )}
-      <div className="form-grid">
-        <label>
-          Prestation souhaitée *
-          <select name="service" key={client} required>
-            {services
-              .filter(
-                (s) =>
-                  client !== "particulier" ||
-                  !["nettoyage-bureaux", "nettoyage-coproprietes"].includes(
-                    s.slug,
-                  ),
-              )
-              .map((s) => (
-                <option value={s.slug} key={s.slug}>
-                  {s.title}
-                </option>
-              ))}
-          </select>
-          {error("service")}
-        </label>
-        <label>
-          Fréquence *
-          <select name="frequency" required>
-            <option value="a-definir">À définir ensemble</option>
-            <option value="ponctuelle">Une intervention ponctuelle</option>
-            <option value="hebdomadaire">Chaque semaine</option>
-            <option value="bimensuelle">Tous les quinze jours</option>
-          </select>
-        </label>
-        <label>
-          Surface approximative (m²)
-          <input
-            name="surface"
-            type="number"
-            min="1"
-            max="999999"
-            placeholder="Ex. 80"
-          />
-          {error("surface")}
-        </label>
-        <label>
-          Date souhaitée
-          <input
-            name="date"
-            type="date"
-            min={new Date().toISOString().slice(0, 10)}
-          />
-          {error("date")}
-        </label>
-        <label>
-          Ville d’intervention *
-          <input
-            name="city"
-            required
-            maxLength={100}
-            autoComplete="address-level2"
-            placeholder="Saint-Germain-en-Laye"
-          />
-          {error("city")}
-        </label>
-        <label>
-          Code postal *
-          <input
-            name="postalCode"
-            required
-            pattern="[0-9]{5}"
-            maxLength={5}
-            inputMode="numeric"
-            autoComplete="postal-code"
-            placeholder="78100"
-          />
-          {error("postalCode")}
-        </label>
-      </div>
       <label>
-        Parlez-nous de votre besoin *
+        {contact
+          ? "Votre message *"
+          : "Précisions sur l’intervention (facultatif)"}
         <textarea
           name="message"
-          required
-          minLength={20}
+          {...fieldState("message")}
+          required={contact}
+          minLength={contact ? 20 : undefined}
           maxLength={4000}
           rows={4}
-          placeholder="Les espaces à entretenir, vos priorités, les contraintes d’accès… (20 caractères minimum)"
+          placeholder={
+            contact
+              ? "Décrivez votre demande en 20 caractères minimum."
+              : "Les espaces à entretenir, vos priorités, les contraintes d’accès…"
+          }
         />
         {error("message")}
       </label>
-      <div className="form-section-label">02 / POUR VOUS RECONTACTER</div>
+      <div className="form-section-label">Vos coordonnées</div>
       <div className="form-grid">
         <label>
           Prénom *
           <input
             name="firstName"
+            {...fieldState("firstName")}
             required
             maxLength={80}
             autoComplete="given-name"
@@ -190,6 +263,7 @@ export function QuoteForm() {
           Nom *
           <input
             name="lastName"
+            {...fieldState("lastName")}
             required
             maxLength={80}
             autoComplete="family-name"
@@ -200,6 +274,7 @@ export function QuoteForm() {
           Email *
           <input
             name="email"
+            {...fieldState("email")}
             type="email"
             required
             maxLength={200}
@@ -208,8 +283,17 @@ export function QuoteForm() {
           {error("email")}
         </label>
         <label>
-          Téléphone (facultatif)
-          <input name="phone" type="tel" maxLength={30} autoComplete="tel" />
+          {contact && intent === "rappel"
+            ? "Téléphone *"
+            : "Téléphone (facultatif)"}
+          <input
+            name="phone"
+            type="tel"
+            maxLength={30}
+            autoComplete="tel"
+            required={contact && intent === "rappel"}
+            {...fieldState("phone")}
+          />
           {error("phone")}
         </label>
       </div>
@@ -221,8 +305,7 @@ export function QuoteForm() {
       </div>
       <p className="privacy-note">
         * Champs obligatoires. Ces données servent uniquement à étudier votre
-        demande et à vous répondre, au titre des mesures précontractuelles.
-        Aucune inscription commerciale.{" "}
+        demande et à vous répondre. Aucune inscription commerciale.{" "}
         <Link href="/politique-confidentialite/">
           En savoir plus sur vos données et vos droits.
         </Link>
@@ -233,9 +316,11 @@ export function QuoteForm() {
           : "Transmettre ma demande"}{" "}
         <ArrowUpRight size={17} />
       </button>
-      <p className="form-note">
-        Une demande de devis, sans engagement et sans paiement.
-      </p>
+      {!contact && (
+        <p className="form-note">
+          Une demande de devis, sans engagement et sans paiement.
+        </p>
+      )}
       {state !== "idle" && state !== "loading" && (
         <div
           className={`form-status ${state}`}
