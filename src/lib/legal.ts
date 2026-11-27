@@ -10,7 +10,7 @@ export const legalPages: Record<
     sections: [
       [
         "Éditeur",
-        `Nom commercial : ÉCLANORA. Statut : ${c.legalStatus}, régime micro-entrepreneur. Identité civile : ${pending(c.civilName)}. SIREN communiqué : ${c.siren}. SIRET : ${pending(c.siret)}. APE : ${c.ape}. Inscription RNE : ${pending(c.rne)}. La formalité INPI déposée le 28 octobre 2026 (J00295818140) ne vaut pas preuve de validation.`,
+        `Nom commercial : ÉCLANORA. Statut : ${c.legalStatus}, régime micro-entrepreneur. Identité civile : ${pending(c.civilName)}. SIREN communiqué : ${c.siren}. SIRET : ${pending(c.siret)}. APE : ${c.ape}. Inscription RNE : ${pending(c.rne)}.`,
       ],
       [
         "Coordonnées",
@@ -19,6 +19,12 @@ export const legalPages: Record<
       [
         "Publication et hébergement",
         `Directeur de publication : ${pending(c.publicationDirector)}. Hébergeur : ${c.host ? `${c.host.name}, ${c.host.address}, ${c.host.phone}` : "Nom, adresse et téléphone à compléter après choix du prestataire"}. Régime de TVA : ${pending(c.vatStatus)}.`,
+      ],
+      [
+        "Médiation de la consommation",
+        c.mediator
+          ? `${c.mediator.name}, ${c.mediator.address}, ${c.mediator.url}`
+          : "Médiateur à désigner avant commercialisation auprès des consommateurs.",
       ],
       [
         "Propriété intellectuelle",
@@ -40,11 +46,11 @@ export const legalPages: Record<
       ],
       [
         "Données et finalités",
-        "Les coordonnées, la ville, le code postal, le type de client et les caractéristiques de l’intervention servent à qualifier la demande et à y répondre. Le téléphone, la surface et la date sont facultatifs. N’indiquez pas de données sensibles ni de codes d’accès dans votre message. Les champs obligatoires sont signalés.",
+        "Le nom, l’e-mail et le message servent à traiter la demande. Le téléphone est obligatoire pour un rappel. Pour un devis, la zone, le type de client et les caractéristiques de l’intervention servent également à qualifier la demande. La surface et la date restent facultatives. Évitez les données sensibles et les codes d’accès.",
       ],
       [
         "Bases légales",
-        "Pour un particulier, l’étude du devis repose sur les mesures précontractuelles demandées par la personne (article 6.1.b du RGPD). Pour un contact agissant au nom d’une organisation, l’intérêt légitime à répondre à la demande professionnelle est à documenter (article 6.1.f). La protection technique contre les abus relève de l’intérêt légitime à sécuriser le service. Aucun traitement de prospection ni profilage commercial n’est activé.",
+        "L’étude d’un devis demandé par un particulier repose sur les mesures précontractuelles (article 6.1.b du RGPD). Les autres échanges et la protection contre les abus relèvent des intérêts légitimes à répondre aux demandes et à sécuriser le service (article 6.1.f). Le site ne réalise aucune prospection ni profilage commercial.",
       ],
       [
         "Destinataires et sous-traitants",
@@ -52,7 +58,7 @@ export const legalPages: Record<
       ],
       [
         "Durées de conservation",
-        `Durée des demandes de devis : ${pending(c.retention)}. La politique de tri et de suppression des boîtes mail et sauvegardes doit être arrêtée avant activation. En mode développement, aucune demande n’est enregistrée ni envoyée. Les compteurs anti-abus sont conservés en mémoire dix minutes, sans persistance.`,
+        `Durée des demandes : ${pending(c.retention)}. La politique de tri et de suppression des boîtes mail et sauvegardes doit être arrêtée avant activation. En mode test, les formulaires sont uniquement validés. La limitation locale utilise une empreinte temporaire de l’adresse réseau, avec une fenêtre de dix minutes et suppression des compteurs expirés à la prochaine demande.`,
       ],
       [
         "Vos droits",

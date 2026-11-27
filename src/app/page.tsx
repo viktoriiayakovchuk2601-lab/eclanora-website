@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, ArrowDown, MapPin } from "lucide-react";
 import { Commitments, Cta, Faq, ServiceCards, Steps } from "@/components/site";
+import { sapAvailable, showProfessionalServices } from "@/lib/company";
 export const metadata = { alternates: { canonical: "/" } };
 export default function Home() {
   return (
@@ -22,8 +23,11 @@ export default function Home() {
             </em>
           </h1>
           <p>
-            Des prestations de nettoyage soignées pour les particuliers, les
-            entreprises et les copropriétés à Saint-Germain-en-Laye.
+            Des prestations de nettoyage soignées pour{" "}
+            {showProfessionalServices
+              ? "les particuliers, les entreprises et les copropriétés"
+              : "les particuliers"}{" "}
+            à Saint-Germain-en-Laye.
           </p>
           <div className="hero-actions">
             <Link href="/devis/" className="button">
@@ -201,8 +205,9 @@ export default function Home() {
       <div className="sap-notice">
         <span>INFORMATION SERVICES À LA PERSONNE</span>
         <p>
-          La déclaration SAP d’Éclanora n’est pas confirmée. Aucun avantage
-          fiscal n’est actuellement garanti.
+          {sapAvailable
+            ? "Le ménage à domicile peut ouvrir droit au crédit d’impôt de 50 % sous réserve des conditions et plafonds applicables."
+            : "Le crédit d’impôt pour le ménage à domicile dépend de la validation du statut SAP d’Éclanora."}
         </p>
         <Link href="/services-a-la-personne/">
           Comprendre les conditions <ArrowUpRight size={14} />

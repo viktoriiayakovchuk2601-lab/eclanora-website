@@ -19,9 +19,15 @@ export function productionIssues(
     if (!company[field]) issues.push(`company.${field} manquant`);
   if (!company.processors.length)
     issues.push("Sous-traitants et lieux de traitement non documentés");
+  const url = URL.parse(env.SITE_URL ?? "");
   if (
-    !env.SITE_URL?.startsWith("https://") ||
-    /localhost|example\./.test(env.SITE_URL)
+    !url ||
+    url.protocol !== "https:" ||
+    url.origin !== env.SITE_URL ||
+    !url.hostname.includes(".") ||
+    /(?:^|\.)(?:localhost|example\.com|example\.org|example\.net)$/.test(
+      url.hostname,
+    )
   )
     issues.push("Domaine HTTPS de production manquant");
   if (env.QUOTE_MODE !== "smtp") issues.push("Envoi SMTP réel non activé");
@@ -34,6 +40,13 @@ export function productionIssues(
     "QUOTE_TO",
   ])
     if (!env[key]) issues.push(`${key} manquant`);
+  if (
+    env.SMTP_PORT &&
+    (!/^\d+$/.test(env.SMTP_PORT) ||
+      Number(env.SMTP_PORT) < 1 ||
+      Number(env.SMTP_PORT) > 65535)
+  )
+    issues.push("SMTP_PORT doit être un numéro de port TCP valide");
   for (const key of [
     "LEGAL_APPROVED",
     "DATA_PROCESSING_APPROVED",

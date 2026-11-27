@@ -9,6 +9,26 @@ export type Service = {
   benefit: string;
   faq: [string, string][];
 };
+export function isProfessionalService(slug: string) {
+  return slug === "nettoyage-bureaux" || slug === "nettoyage-coproprietes";
+}
+export const localPages = [
+  {
+    slug: "saint-germain-en-laye",
+    city: "Saint-Germain-en-Laye",
+    postalCode: "78100",
+    sections: [
+      [
+        "Préparer un ménage dans le centre-ville",
+        "Pour un appartement en centre-ville, précisez l’étage, la présence d’un ascenseur et les possibilités de déposer le matériel. Ces renseignements permettent d’estimer le temps réellement consacré au ménage.",
+      ],
+      [
+        "Définir les priorités d’un entretien régulier",
+        "Indiquez les pièces à traiter à chaque visite, les sols qui nécessitent un produit adapté et les tâches à alterner. Pour un premier nettoyage ou une remise de clés, communiquez la date et les zones à traiter en priorité.",
+      ],
+    ],
+  },
+] as const;
 export const services: Service[] = [
   {
     slug: "nettoyage-maison-appartement",

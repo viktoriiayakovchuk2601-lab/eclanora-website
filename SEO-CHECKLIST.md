@@ -36,3 +36,6 @@ Objectifs indicatifs : LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1. Mesurer sur m
 
 Aucun outil de suivi tiers installé. Le résultat API distingue test, acceptation SMTP et erreur. Après choix d’une solution, mesurer les demandes réellement acceptées, appels et taux de transformation avec minimisation, information et consentement si nécessaire. Ne pas envoyer nom, email, téléphone ou texte libre à l’analytics. Une ouverture de formulaire n’est pas un lead transmis. Les compteurs d’exploitation doivent rester agrégés et leurs durées justifiées.
 
+## Vérification de propriété
+
+Renseigner les codes publics `GOOGLE_SITE_VERIFICATION` et `BING_SITE_VERIFICATION` si la méthode de vérification HTML est choisie. Les balises sont émises uniquement sur le build approuvé. La vérification DNS reste possible sans modification du site. Soumettre le sitemap après validation du domaine, puis vérifier l’URL canonique détectée et les exclusions d’indexation. [Google Search Central](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)

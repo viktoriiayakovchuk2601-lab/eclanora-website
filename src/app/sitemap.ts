@@ -1,13 +1,26 @@
 import type { MetadataRoute } from "next";
-import { siteUrl } from "@/lib/company";
-import { services, articles } from "@/lib/content";
+import { company, showProfessionalServices, siteUrl } from "@/lib/company";
+import {
+  services,
+  articles,
+  isProfessionalService,
+  localPages,
+} from "@/lib/content";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     "",
-    ...services.map((s) => s.slug),
+    "services",
+    ...services
+      .map((s) => s.slug)
+      .filter(
+        (slug) => showProfessionalServices || !isProfessionalService(slug),
+      ),
     "a-propos",
     "tarifs",
     "zones-intervention",
+    ...localPages
+      .filter(({ city }) => company.confirmedZones.includes(city))
+      .map(({ slug }) => slug),
     "services-a-la-personne",
     "devis",
     "contact",
